@@ -1,0 +1,28 @@
+name: 학교 공지 알리미
+
+on:
+  schedule:
+    # 매일 한국 시간 오전 9시에 실행 (국제표준시 UTC로는 0시 0분)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 수동으로 실행 버튼 만들기
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v3
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 필요한 프로그램 설치
+        run: pip install requests beautifulsoup4 pytz
+
+      - name: 알림 봇 실행
+        env: # 아까 등록한 비밀번호를 로봇에게 전달
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
