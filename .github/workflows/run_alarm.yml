@@ -25,4 +25,4 @@ jobs:
         env: # 아까 등록한 비밀번호를 로봇에게 전달
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: python -u main.py
