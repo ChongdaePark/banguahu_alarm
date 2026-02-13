@@ -72,7 +72,7 @@ def check_school_notice():
         print(f"[{i+1}/{len(TARGET_BOARDS)}] {board['name']} 확인 중...", end=" ")
         
         try:
-            response = requests.get(board['url'], headers=headers, timeout=10)
+            response = requests.get(board['url'], headers=headers, timeout=30, verify=False)
             soup = BeautifulSoup(response.text, 'html.parser')
             rows = soup.select('tbody tr')
             
