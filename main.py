@@ -85,7 +85,7 @@ def check_school_notice():
                     date = cols[4].get_text().strip()
                     
                     if today in date or date in today:
-                        if "늘봄" in title or "방과후" in title "외부강사" in title:
+                        if "늘봄" in title or "방과후" in title or "외부강사" in title:
                             print(f"\n   >>> ✨ 발견! {title}")
                             msg = f"🔔 [{board['name']}] 오늘자 새 글!\n\n제목: {title}\n날짜: {date}\n\n바로가기: {board['url']}"
                             send_telegram_message(msg)
