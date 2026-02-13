@@ -129,48 +129,66 @@ TARGET_BOARDS = [
 ]
 
 def send_telegram_message(text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.get(url, params={'chat_id': CHAT_ID, 'text': text})
+    send_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    params = {'chat_id': CHAT_ID, 'text': text}
+    try:
+        requests.get(send_url, params=params)
+    except:
+        print("메시지 전송 실패 (인터넷 문제일 수 있습니다)")
 
 def check_school_notice():
-    # 1. 오늘 날짜 구하기 (한국 시간 기준)
-    korea_timezone = pytz.timezone('Asia/Seoul')
-    today = datetime.datetime.now(korea_timezone).strftime("%Y.%m.%d")
-    
-    print(f"📅 기준 날짜: {today} (오늘 올라온 글만 찾습니다)")
-    
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    
-    found_count = 0
+    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔍 모든 게시판을 검사합니다...")
 
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    # 설정한 게시판 목록을 하나씩 돌면서 검사
     for board in TARGET_BOARDS:
+        board_name = board["name"]
+        url = board["url"]
+
+        # 게시판마다 기억해야 할 파일이 다르므로 파일명을 다르게 만듭니다.
+        # 예: sent_logs_공지사항.txt, sent_logs_가정통신문.txt
+        log_filename = f"sent_logs_{board_name}.txt"
+
+        # 기록 불러오기
+        sent_list = []
+        if os.path.exists(log_filename):
+            with open(log_filename, "r", encoding="utf-8") as f:
+                sent_list = f.read().splitlines()
+
         try:
-            response = requests.get(board["url"], headers=headers)
+            response = requests.get(url, headers=headers)
             soup = BeautifulSoup(response.text, 'html.parser')
             rows = soup.select('tbody tr')
-            
+
+            new_finds_count = 0
+
             for row in rows:
-                # 제목과 날짜를 가져옵니다.
-                # 보통 학교 홈페이지는 날짜가 4번째나 5번째 칸에 있습니다.
-                cols = row.select('td')
-                if len(cols) > 3:
-                    title = cols[1].get_text().strip() # 제목 (보통 2번째)
-                    date = cols[4].get_text().strip()  # 날짜 (보통 5번째)
-                    
-                    # 날짜 형식이 다를 경우를 대비해 단순 포함 여부 확인
-                    # "오늘 날짜가 포함되어 있고" AND "키워드가 있으면"
-                    if today in date or date in today:
-                        if "늘봄" in title or "방과후" in title:
-                            print(f"✨ 발견! [{board['name']}] {title}")
-                            msg = f"🔔 [{board['name']}] 오늘자 새 글!\n\n제목: {title}\n날짜: {date}\n\n바로가기: {board['url']}"
-                            send_telegram_message(msg)
-                            found_count += 1
-                            
+                link = row.select_one('a')
+                if link:
+                    title = link.get_text().strip()
+
+                    # 키워드 검사
+                    if "늘봄" in title or "방과후" in title or "외부강사" in title:
+                        if title not in sent_list:
+                            # 찾았다!
+                            print(f"✨ [{board_name}] 새로운 글 발견: {title}")
+
+                            message = f"🔔 [{board_name} 알림]\n\n{title}\n\n바로가기: {url}"
+                            send_telegram_message(message)
+
+                            sent_list.append(title)
+                            new_finds_count += 1
+
+            # 파일 업데이트
+            with open(log_filename, "w", encoding="utf-8") as f:
+                for item in sent_list:
+                    f.write(item + "\n")
+
+            if new_finds_count == 0:
+                print(f"   - {board_name}: 새로운 관련 글 없음")
+
         except Exception as e:
-            print(f"에러 발생: {e}")
+            print(f"⚠️ {board_name} 접속 중 오류 발생: {e}")
 
-    if found_count == 0:
-        print("✅ 오늘 올라온 관련 공지는 없습니다.")
-
-if __name__ == "__main__":
-    check_school_notice()
+    print("✅ 전체 검사 완료. 다음 9시까지 대기합니다.\n")
